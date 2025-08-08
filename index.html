@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>AI English Pet 登入驗證</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: linear-gradient(135deg, #e0e7ff 0%, #f9fafb 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', 'Noto Sans TC', Arial, sans-serif;
+      margin: 0;
+    }
+    .verify-box {
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      border-radius: 18px;
+      padding: 2.5rem 2.5rem 2rem 2.5rem;
+      text-align: center;
+      max-width: 350px;
+      margin: 2rem auto;
+    }
+    h2 {
+      color: #3b82f6;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      letter-spacing: 1px;
+    }
+    .loader {
+      border: 6px solid #e0e7ff;
+      border-top: 6px solid #3b82f6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1.2rem auto;
+      display: none;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.18);
+      padding: 2rem 2.5rem 1.5rem 2.5rem;
+      text-align: center;
+      min-width: 300px;
+      max-width: 90vw;
+    }
+    .modal-content input[type="email"] {
+      width: 90%;
+      padding: 0.7rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .modal-content input[type="email"]:focus {
+      border: 1.5px solid #3b82f6;
+    }
+    .modal-content button {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .modal-content button:disabled {
+      background: #a5b4fc;
+      cursor: not-allowed;
+    }
+    .error-msg {
+      color: #ef4444;
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      min-height: 1.2em;
+    }
+  </style>
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyk5A-esVIFnrbBWCbfcDIWCa55iAjNI5CTA2M5YXn9c-QkvbgXGoZIy8GrwKxgoRai7w/exec'; // 請替換為你的 Apps Script 網址
+
+    function setCookie(name, value, days) {
+      const d = new Date();
+      d.setTime(d.getTime() + (days*24*60*60*1000));
+      document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/`;
+    }
+
+    function getCookie(name) {
+      const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return v ? v.pop() : '';
+    }
+
+    async function checkEmail(email) {
+      const res = await fetch(`${API_URL}?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      return data.success;
+    }
+
+    function randomToken(len=24) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let token = '';
+      for (let i = 0; i < len; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
+      return token;
+    }
+
+
+    function showEmailModal() {
+      return new Promise((resolve) => {
+        // 建立 modal 結構
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <h2>請輸入購買時的信箱</h2>
+            <div class="error-msg" id="email-error"></div>
+            <input type="email" id="email-input" placeholder="your@email.com" autocomplete="email" required autofocus />
+            <br>
+            <button id="email-submit" disabled>驗證</button>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        const input = modal.querySelector('#email-input');
+        const btn = modal.querySelector('#email-submit');
+        const error = modal.querySelector('#email-error');
+
+        input.addEventListener('input', () => {
+          if (!input.value) {
+            btn.disabled = true;
+            error.textContent = '';
+            return;
+          }
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value)) {
+            btn.disabled = true;
+            error.textContent = 'Email 格式錯誤';
+          } else {
+            btn.disabled = false;
+            error.textContent = '';
+          }
+        });
+
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          error.textContent = '驗證中...';
+          const valid = await checkEmail(input.value);
+          if (valid) {
+            setCookie('user_email', input.value, 365);
+            document.body.removeChild(modal);
+            resolve(input.value);
+          } else {
+            error.textContent = '查無此信箱，請確認您輸入的是購買時的信箱';
+            btn.disabled = false;
+          }
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !btn.disabled) btn.click();
+        });
+      });
+    }
+
+    // 防止右鍵、F12、Ctrl+U、Ctrl+C、Ctrl+Shift+I、Ctrl+S、Ctrl+P、選取文字
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', function(e) {
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+        (e.ctrlKey && (e.key === 'U' || e.key === 'S' || e.key === 'P' || e.key === 'C'))
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    });
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+
+    window.onload = async function() {
+      let email = getCookie('user_email');
+      if (!email) {
+        document.querySelector('.loader').style.display = 'none';
+        email = await showEmailModal();
+        if (!email) {
+          document.body.innerHTML = '<div class="verify-box"><h2>未輸入信箱，無法進入本頁面</h2></div>';
+          return;
+        }
+      }
+      // 顯示 loading 動畫
+      document.querySelector('.loader').style.display = 'block';
+      // 產生混淆網址
+      const token = randomToken();
+      // 跳轉
+      setTimeout(() => {
+        window.location.href = `https://ai-english-pet-fcc1c.firebaseapp.com/?t=${token}`;
+      }, 800);
+    }
+  </script>
+</head>
+<body>
+  <div class="verify-box">
+    <div class="loader"></div>
+    <h2>驗證中，請稍候...</h2>
+  </div>
+</body>
+</html>
