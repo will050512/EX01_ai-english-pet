@@ -204,9 +204,22 @@
       // 產生混淆網址
       const token = randomToken();
       // 跳轉
-      setTimeout(() => {
-        window.location.href = `https://ai-english-pet-fcc1c.firebaseapp.com/?t=${token}`;
-      }, 800);
+        setTimeout(() => {
+          // 顯示選擇頁面
+          document.body.innerHTML = `
+            <div class='verify-box'>
+              <h2>請選擇要進入的服務</h2>
+              <button id='btn-adventure' style='margin: 1rem 0; width: 90%; font-size: 1.1rem;'>英語冒險島</button><br>
+              <button id='btn-pet' style='margin: 1rem 0; width: 90%; font-size: 1.1rem;'>AI英語伴讀</button>
+            </div>
+          `;
+          document.getElementById('btn-adventure').onclick = function() {
+            window.location.href = `https://afs-english-adventure.web.app/?t=${token}`;
+          };
+          document.getElementById('btn-pet').onclick = function() {
+            window.location.href = `https://ai-english-pet-fcc1c.firebaseapp.com/?t=${token}`;
+          };
+        }, 800);
     }
   </script>
 </head>
